@@ -437,7 +437,7 @@ class UltraHandballPredictor(BaseHandballPredictor):
         # 1. Ultra Result Model - Ensemble with calibration
         logger.info("Trenowanie ultra-modelu wyniku...")
         
-        # XGBoost with class weights
+        # XGBoost for multi-class classification
         xgb_result = xgb.XGBClassifier(
             objective='multi:softprob',
             n_estimators=500,
@@ -447,7 +447,6 @@ class UltraHandballPredictor(BaseHandballPredictor):
             colsample_bytree=0.8,
             reg_alpha=0.1,
             reg_lambda=1.0,
-            scale_pos_weight=weight_dict[1] if 1 in weight_dict else 1,  # Draw weight
             random_state=config.ml.random_state,
             n_jobs=-1
         )
