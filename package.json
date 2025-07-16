@@ -1,0 +1,16 @@
+{
+  "name": "handball-season-scraper",
+  "version": "1.0.0",
+  "description": "Scraper for handball season data from Atrium Sports API",
+  "main": "handball_season_scraper.js",
+  "scripts": {
+    "start": "node handball_season_scraper.js",
+    "scrape": "node handball_season_scraper.js"
+  },
+  "keywords": ["handball", "scraper", "sports", "api"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
