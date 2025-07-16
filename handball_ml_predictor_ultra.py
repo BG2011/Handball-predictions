@@ -574,13 +574,13 @@ class UltraHandballPredictor(BaseHandballPredictor):
         home_nn = max(0, self.goals_home_nn.predict(X)[0])
         away_nn = max(0, self.goals_away_nn.predict(X)[0])
         
-        # Ensemble with better weighting
-        home_goals = (0.6 * home_lambda + 0.4 * home_nn)
-        away_goals = (0.6 * away_lambda + 0.4 * away_nn)
+        # Ensemble with better weighting and reduced variance
+        home_goals = (0.7 * home_lambda + 0.3 * home_nn)
+        away_goals = (0.7 * away_lambda + 0.3 * away_nn)
         
-        # Add variance to prevent overconfidence
-        home_variance = np.random.normal(0, 0.5)
-        away_variance = np.random.normal(0, 0.5)
+        # Reduce variance to improve accuracy (smaller random component)
+        home_variance = np.random.normal(0, 0.3)
+        away_variance = np.random.normal(0, 0.3)
         
         home_goals = max(15, min(45, home_goals + home_variance))
         away_goals = max(15, min(45, away_goals + away_variance))
@@ -605,8 +605,8 @@ class UltraHandballPredictor(BaseHandballPredictor):
         result_labels = ['Wygrana gospodarzy', 'Remis', 'Wygrana gości']
         
         for i, (_, match) in enumerate(prediction_df.iterrows()):
-            # Get goal predictions
-            home_goals, away_goals = self.predict_goals_poisson(X_pred_scaled[i:i+1])
+            # Get initial goal predictions
+            home_goals_raw, away_goals_raw = self.predict_goals_poisson(X_pred_scaled[i:i+1])
             
             # Apply bias corrections to probabilities
             probabilities = result_proba[i].copy()
@@ -615,8 +615,9 @@ class UltraHandballPredictor(BaseHandballPredictor):
             probabilities[0] *= (1 - self.home_bias_correction * 0.5)  # Reduce home win prob
             probabilities[2] *= (1 + self.home_bias_correction * 0.5)  # Increase away win prob
             
-            # Boost draw predictions
-            probabilities[1] *= self.draw_boost_factor
+            # Reduce draw boost factor to be more realistic (8-10% instead of 18%)
+            realistic_draw_boost = min(self.draw_boost_factor, 1.2)  # Cap at 20% increase
+            probabilities[1] *= realistic_draw_boost
             
             # Renormalize probabilities
             probabilities = probabilities / probabilities.sum()
@@ -649,7 +650,26 @@ class UltraHandballPredictor(BaseHandballPredictor):
             
             predicted_result_idx = np.argmax(probabilities)
             
-            # Ensure reasonable goal counts
+            # CRITICAL FIX: Ensure goal predictions match outcome predictions
+            home_goals = max(15, min(50, home_goals_raw))
+            away_goals = max(15, min(50, away_goals_raw))
+            
+            # Adjust goals to match predicted outcome
+            if predicted_result_idx == 0:  # Home win predicted
+                if home_goals <= away_goals:
+                    # Force home win by adjusting goals
+                    home_goals = away_goals + np.random.randint(1, 4)
+            elif predicted_result_idx == 1:  # Draw predicted
+                if home_goals != away_goals:
+                    # Force draw by making goals equal
+                    avg_goals = (home_goals + away_goals) // 2
+                    home_goals = away_goals = avg_goals
+            elif predicted_result_idx == 2:  # Away win predicted
+                if away_goals <= home_goals:
+                    # Force away win by adjusting goals
+                    away_goals = home_goals + np.random.randint(1, 4)
+            
+            # Final bounds check
             home_goals = max(15, min(50, home_goals))
             away_goals = max(15, min(50, away_goals))
             
