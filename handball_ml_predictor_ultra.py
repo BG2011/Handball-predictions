@@ -279,7 +279,7 @@ class UltraHandballPredictor(BaseHandballPredictor):
             }
             
             # Team embeddings
-            if home_team in self.team_embeddings:
+            if home_team in self.team_embeddings and away_team in self.team_embeddings:
                 home_embed = self.team_embeddings[home_team]
                 away_embed = self.team_embeddings[away_team]
                 
@@ -291,6 +291,13 @@ class UltraHandballPredictor(BaseHandballPredictor):
                 # Embedding differences
                 for i in range(len(home_embed)):
                     feature_row[f'embed_diff_{i}'] = home_embed[i] - away_embed[i]
+            else:
+                # Default embeddings for unknown teams
+                default_embed = np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.5])
+                for i, val in enumerate(default_embed):
+                    feature_row[f'home_embed_{i}'] = val
+                    feature_row[f'away_embed_{i}'] = val
+                    feature_row[f'embed_diff_{i}'] = 0
             
             # Team statistics
             home_stats = self.team_stats.get(home_team, {})
