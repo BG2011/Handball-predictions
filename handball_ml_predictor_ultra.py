@@ -624,14 +624,17 @@ class UltraHandballPredictor(BaseHandballPredictor):
             probabilities[0] *= (1 - self.home_bias_correction * 0.5)  # Reduce home win prob
             probabilities[2] *= (1 + self.home_bias_correction * 0.5)  # Increase away win prob
             
-            # Apply more aggressive draw reduction for realistic 8-10% rate
-            realistic_draw_boost = min(self.draw_boost_factor, 0.8)  # Reduce draws significantly
+            # Apply aggressive draw reduction for realistic 8-10% rate
+            realistic_draw_boost = min(self.draw_boost_factor, 0.5)  # Significantly reduce draws
             probabilities[1] *= realistic_draw_boost
             
-            # Additional draw penalty for very close matches
+            # Additional draw penalty - handball draws are rare
+            probabilities[1] *= 0.5  # Cut draw probability in half
+            
+            # Further penalty for very close matches (still reduce draws)
             prob_diff = abs(probabilities[0] - probabilities[2])
-            if prob_diff < 0.1:  # Very close match
-                probabilities[1] *= 0.7  # Further reduce draw probability
+            if prob_diff < 0.15:  # Close match
+                probabilities[1] *= 0.6  # Further reduce draw probability
             
             # Renormalize probabilities
             probabilities = probabilities / probabilities.sum()
