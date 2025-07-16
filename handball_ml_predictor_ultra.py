@@ -35,14 +35,14 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, Grad
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from imblearn.over_sampling import SMOTE
-from imblearn.combine import SMOTEENN
+# from imblearn.over_sampling import SMOTE
+# from imblearn.combine import SMOTEENN
 
 # Statistical models
 from scipy.stats import poisson, skellam, nbinom
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-from scipy.optimize import minimize
+# import statsmodels.api as sm
+# import statsmodels.formula.api as smf
+# from scipy.optimize import minimize
 
 # Import base classes
 from base_handball_predictor import BaseHandballPredictor
@@ -84,8 +84,8 @@ class UltraHandballPredictor(BaseHandballPredictor):
         self.home_bias_correction = 0.0
         self.draw_boost_factor = 1.0
         
-        # SMOTE for class imbalance
-        self.smote = SMOTEENN(random_state=config.ml.random_state)
+        # Manual class balancing (alternative to SMOTE)
+        self.class_balancer = None
         
     def load_training_data(self) -> pd.DataFrame:
         """Ładuje dane treningowe z zaawansowanym preprocessingiem"""
@@ -393,17 +393,38 @@ class UltraHandballPredictor(BaseHandballPredictor):
         logger.info(f"Home bias correction: {self.home_bias_correction:.3f}")
         logger.info(f"Draw boost factor: {self.draw_boost_factor:.3f}")
         
-        # Apply SMOTE for class imbalance
-        X_train_resampled, y_result_resampled = self.smote.fit_resample(X_train, y_result)
+        # Manual class balancing (alternative to SMOTE)
+        # Oversample minority classes (especially draws)
+        draw_indices = np.where(y_result == 1)[0]
+        home_indices = np.where(y_result == 0)[0]
+        away_indices = np.where(y_result == 2)[0]
+        
+        # Calculate target sizes
+        max_size = max(len(home_indices), len(away_indices))
+        draw_target = min(max_size, len(draw_indices) * 3)  # Triple draw samples
+        
+        # Create balanced indices
+        balanced_indices = []
+        balanced_indices.extend(home_indices)
+        balanced_indices.extend(away_indices)
+        
+        # Add draws multiple times
+        for _ in range(3):
+            balanced_indices.extend(draw_indices)
+        
+        # Create resampled data
+        X_train_resampled = X_train.iloc[balanced_indices]
+        y_result_resampled = y_result.iloc[balanced_indices]
         
         # Scale features
         X_train_scaled = self.scaler.fit_transform(X_train_resampled)
         
-        logger.info(f"SMOTE applied: {len(X_train)} -> {len(X_train_resampled)} samples")
+        logger.info(f"Manual balancing applied: {len(X_train)} -> {len(X_train_resampled)} samples")
+        logger.info(f"Draw samples: {len(draw_indices)} -> {(y_result_resampled == 1).sum()}")
         
         # Update goal data to match resampled indices
-        y_home_resampled = y_home_goals.iloc[self.smote.sample_indices_]
-        y_away_resampled = y_away_goals.iloc[self.smote.sample_indices_]
+        y_home_resampled = y_home_goals.iloc[balanced_indices]
+        y_away_resampled = y_away_goals.iloc[balanced_indices]
         
         # 1. Ultra Result Model - Ensemble with calibration
         logger.info("Trenowanie ultra-modelu wyniku...")
