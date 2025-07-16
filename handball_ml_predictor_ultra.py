@@ -541,6 +541,9 @@ class UltraHandballPredictor(BaseHandballPredictor):
         # Train uncertainty model on original data
         X_train_original_scaled = self.scaler.transform(X_train)
         
+        # First train the base result model
+        self.result_model.fit(X_train_scaled, y_result_resampled)
+        
         # Create uncertainty targets (entropy of predictions)
         temp_proba = self.result_model.predict_proba(X_train_original_scaled)
         uncertainty_targets = -np.sum(temp_proba * np.log(temp_proba + 1e-10), axis=1)
