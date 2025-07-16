@@ -79,6 +79,7 @@ class UltraHandballPredictor(BaseHandballPredictor):
         self.numerical_features = []
         self.categorical_features = []
         self.advanced_features = []
+        self.feature_columns = []
         
         # Bias correction
         self.home_bias_correction = 0.0
@@ -595,8 +596,7 @@ class UltraHandballPredictor(BaseHandballPredictor):
         X_pred = self.create_features(prediction_df, is_training=False)
         
         # Use same columns as during training
-        feature_columns = [col for col in X_pred.columns if col not in ['result', 'home_goals', 'away_goals', 'total_goals', 'goal_diff']]
-        X_pred_clean = X_pred[feature_columns]
+        X_pred_clean = X_pred[self.feature_columns]  # Use saved feature columns
         X_pred_scaled = self.scaler.transform(X_pred_clean)
         
         # Predictions
@@ -748,6 +748,7 @@ class UltraHandballPredictor(BaseHandballPredictor):
             features_df = self.create_features(training_df, is_training=True)
             
             feature_columns = [col for col in features_df.columns if col not in ['result', 'home_goals', 'away_goals', 'total_goals', 'goal_diff']]
+            self.feature_columns = feature_columns  # Save for later use
             X = features_df[feature_columns]
             y_result = features_df['result']
             y_home_goals = features_df['home_goals']
