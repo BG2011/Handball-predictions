@@ -653,8 +653,10 @@ class UltraHandballPredictor(BaseHandballPredictor):
                 probabilities[1] *= 0.1  # Almost eliminate draw probability
             
             # Step 3: Final calibration to hit target 8-10% rate
-            # More moderate global suppression
-            probabilities[1] *= 0.6  # Allow some draws to pass through
+            # Implement percentage-based draw limiting
+            # We want only ~9% of all matches to be draws
+            # Apply calibrated suppression to achieve this
+            probabilities[1] *= 0.45  # Calibrated suppression to reach ~9% target
             
             # Renormalize probabilities
             probabilities = probabilities / probabilities.sum()
